@@ -12,12 +12,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-public class BalanceService {
-    private static final Logger log = LoggerFactory.getLogger(BalanceService.class);
+public class BalanceConsumerService {
+    private static final Logger log = LoggerFactory.getLogger(BalanceConsumerService.class);
     private final BalanceRepository balanceRepository;
     private final TransactionRepository transactionRepository;
 
-    public BalanceService(BalanceRepository balanceRepository, TransactionRepository transactionRepository) {
+    public BalanceConsumerService(BalanceRepository balanceRepository, TransactionRepository transactionRepository) {
         this.balanceRepository = balanceRepository;
         this.transactionRepository = transactionRepository;
     }
