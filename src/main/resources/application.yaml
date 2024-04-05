@@ -1,0 +1,19 @@
+spring:
+  profiles:
+    active: local
+server:
+  port: 8082
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  kafka:
+    transaction-created-topic: transaction-created
+    transaction-completed-topic: transaction-completed
+    transaction-rejected-topic: transaction-rejected
+    consumer:
+      bootstrap-servers: localhost:9092
+      key-deserializer: org.apache.kafka.common.serialization.IntegerDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      group-id: transactions-events-listener-group
