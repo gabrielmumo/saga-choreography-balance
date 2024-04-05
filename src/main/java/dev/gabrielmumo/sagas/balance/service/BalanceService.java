@@ -34,30 +34,8 @@ public class BalanceService {
                     String.format(message)
             );
             log.info(message);
-        } catch (AccountNotFoundException e) {
-            var message = String.format(
-                    "Account was not found. Unable to continue transaction %d. Reason %s",
-                    transactionEvent.transactionId(),
-                    e.getMessage()
-
-            );
-            handleException(message, transactionEvent.transactionId(), TransactionStatus.FAILED);
-        } catch (NotEnoughBalanceException e) {
-            var message = String.format(
-                    "Not enough balance in account %s to transfer %.5f. Unable to continue transaction %d. Reason %s",
-                    transactionEvent.from(),
-                    transactionEvent.amount(),
-                    transactionEvent.transactionId(),
-                    e.getMessage()
-            );
-            handleException(message, transactionEvent.transactionId(), TransactionStatus.REJECTED);
         } catch (Exception e) {
-            var message = String.format(
-                    "Error updating balances. Unable to continue transaction %d. Reason %s",
-                    transactionEvent.transactionId(),
-                    e.getMessage()
-            );
-            handleException(message, transactionEvent.transactionId(), TransactionStatus.FAILED);
+            handleException(e, transactionEvent);
         }
     }
 
@@ -81,8 +59,40 @@ public class BalanceService {
         return from.getBalance() > txnAmount;
     }
 
-    private void handleException(String message, Integer id, TransactionStatus status) {
+    private void handleException(Exception e, TransactionEvent transactionEvent) {
+        String message = "";
+        if(e instanceof AccountNotFoundException) {
+            message = String.format(
+                    "Account was not found. Unable to continue transaction %d. Reason %s",
+                    transactionEvent.transactionId(),
+                    e.getMessage()
+
+            );
+            transactionRepository.upsertTransaction(
+                    transactionEvent.transactionId(),
+                    String.format("Status: %s | %s", TransactionStatus.FAILED, message)
+            );
+            upsertTransaction(transactionEvent.transactionId(), TransactionStatus.FAILED, message);
+        } else if (e instanceof NotEnoughBalanceException) {
+            message = String.format(
+                    "Not enough balance in account %s to transfer %.5f. Unable to continue transaction %d. Reason %s",
+                    transactionEvent.from(),
+                    transactionEvent.amount(),
+                    transactionEvent.transactionId(),
+                    e.getMessage()
+            );
+            upsertTransaction(transactionEvent.transactionId(), TransactionStatus.REJECTED, message);
+        } else {
+            message = String.format(
+                    "Error updating balances. Unable to continue transaction %d. Reason %s",
+                    transactionEvent.transactionId(),
+                    e.getMessage()
+            );
+            upsertTransaction(transactionEvent.transactionId(), TransactionStatus.FAILED, message);
+        }
         log.error(message);
+    }
+    private void upsertTransaction(Integer id, TransactionStatus status, String message) {
         transactionRepository.upsertTransaction(
                 id,
                 String.format("Status: %s | %s", status, message)
