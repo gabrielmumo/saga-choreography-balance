@@ -16,15 +16,20 @@ public class BalanceConsumerService {
     private static final Logger log = LoggerFactory.getLogger(BalanceConsumerService.class);
     private final BalanceRepository balanceRepository;
     private final TransactionRepository transactionRepository;
+    private final BalanceProducerService balanceProducerService;
 
-    public BalanceConsumerService(BalanceRepository balanceRepository, TransactionRepository transactionRepository) {
+    public BalanceConsumerService(BalanceRepository balanceRepository,
+                                  TransactionRepository transactionRepository,
+                                  BalanceProducerService balanceProducerService) {
         this.balanceRepository = balanceRepository;
         this.transactionRepository = transactionRepository;
+        this.balanceProducerService = balanceProducerService;
     }
 
     public void processTransaction(TransactionEvent transactionEvent) {
         try {
             updateBalances(transactionEvent);
+            balanceProducerService.produceCompletedTransactionEvent(transactionEvent);
             String message = String.format(
                     "Status: %s | Transfer transaction was successfully completed.",
                     transactionEvent.transactionEventType()
@@ -35,6 +40,7 @@ public class BalanceConsumerService {
             );
             log.info(message);
         } catch (Exception e) {
+            balanceProducerService.produceRejectedTransactionEvent(transactionEvent);
             handleException(e, transactionEvent);
         }
     }
