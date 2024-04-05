@@ -60,38 +60,27 @@ public class BalanceConsumerService {
     }
 
     private void handleException(Exception e, TransactionEvent transactionEvent) {
-        String message = "";
-        if(e instanceof AccountNotFoundException) {
-            message = String.format(
-                    "Account was not found. Unable to continue transaction %d. Reason %s",
-                    transactionEvent.transactionId(),
-                    e.getMessage()
+        String message;
+        TransactionStatus status;
 
-            );
-            transactionRepository.upsertTransaction(
-                    transactionEvent.transactionId(),
-                    String.format("Status: %s | %s", TransactionStatus.FAILED, message)
-            );
-            upsertTransaction(transactionEvent.transactionId(), TransactionStatus.FAILED, message);
+        if (e instanceof AccountNotFoundException) {
+            message = String.format("Account was not found. Unable to continue transaction %d. Reason: %s",
+                    transactionEvent.transactionId(), e.getMessage());
+            status = TransactionStatus.FAILED;
         } else if (e instanceof NotEnoughBalanceException) {
-            message = String.format(
-                    "Not enough balance in account %s to transfer %.5f. Unable to continue transaction %d. Reason %s",
-                    transactionEvent.from(),
-                    transactionEvent.amount(),
-                    transactionEvent.transactionId(),
-                    e.getMessage()
-            );
-            upsertTransaction(transactionEvent.transactionId(), TransactionStatus.REJECTED, message);
+            message = String.format("Not enough balance in account %s to transfer %.5f. Unable to continue transaction %d. Reason: %s",
+                    transactionEvent.from(), transactionEvent.amount(), transactionEvent.transactionId(), e.getMessage());
+            status = TransactionStatus.REJECTED;
         } else {
-            message = String.format(
-                    "Error updating balances. Unable to continue transaction %d. Reason %s",
-                    transactionEvent.transactionId(),
-                    e.getMessage()
-            );
-            upsertTransaction(transactionEvent.transactionId(), TransactionStatus.FAILED, message);
+            message = String.format("Error updating balances. Unable to continue transaction %d. Reason: %s",
+                    transactionEvent.transactionId(), e.getMessage());
+            status = TransactionStatus.FAILED;
         }
+
+        upsertTransaction(transactionEvent.transactionId(), status, message);
         log.error(message);
     }
+
     private void upsertTransaction(Integer id, TransactionStatus status, String message) {
         transactionRepository.upsertTransaction(
                 id,
