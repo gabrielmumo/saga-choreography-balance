@@ -29,7 +29,8 @@ public class BalanceConsumerService {
     public void processTransaction(TransactionEvent transactionEvent) {
         try {
             updateBalances(transactionEvent);
-            balanceProducerService.produceCompletedTransactionEvent(transactionEvent);
+            var completed = transactionEvent.build(TransactionStatus.COMPLETED);
+            balanceProducerService.produceCompletedTransactionEvent(completed);
             String message = String.format(
                     "Status: %s | Transfer transaction was successfully completed.",
                     transactionEvent.transactionEventType()
@@ -40,7 +41,6 @@ public class BalanceConsumerService {
             );
             log.info(message);
         } catch (Exception e) {
-            balanceProducerService.produceRejectedTransactionEvent(transactionEvent);
             handleException(e, transactionEvent);
         }
     }
@@ -83,6 +83,8 @@ public class BalanceConsumerService {
             status = TransactionStatus.FAILED;
         }
 
+        var rejected = transactionEvent.build(status);
+        balanceProducerService.produceRejectedTransactionEvent(rejected);
         upsertTransaction(transactionEvent.transactionId(), status, message);
         log.error(message);
     }
